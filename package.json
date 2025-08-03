@@ -1,7 +1,7 @@
 {
   "name": "PatchMind",
   "displayName": "patchmind",
-  "description": "Auto-generate tests and docs on save using LLM",
+  "description": "Auto-generate pull requests using LLM",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.102.0"
@@ -62,5 +62,6 @@
     "git",
     "ai",
     "devops"
-  ]
+  ],
+  "icon": "images/logo.png"
 }
