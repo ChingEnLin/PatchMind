@@ -9,15 +9,13 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "*"
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "PatchMind.helloWorld",
-        "title": "Hello World"
+        "command": "patchmind.generatePrSummary",
+        "title": "PatchMind: Generate Pull Request Summary"
       }
     ]
   },
@@ -42,7 +40,27 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@google/genai": "^1.12.0",
     "dotenv": "^17.2.1",
     "node-fetch": "^3.3.2"
-  }
+  },
+  "publisher": "CELin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChingEnLin/patchmind.git"
+  },
+  "engines": {
+    "vscode": "^1.102.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "llm",
+    "gemini",
+    "pull-request",
+    "git",
+    "ai",
+    "devops"
+  ]
 }

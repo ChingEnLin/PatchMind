@@ -1,71 +1,46 @@
-# PatchMind README
+# PatchMind
 
-This is the README for your extension "PatchMind". After writing up a brief description, we recommend including the following sections.
+Generate smart pull request titles and descriptions from your Git diff using Google Gemini ✨
 
-## Features
+## ✨ Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- Instantly generate concise, meaningful pull request titles and detailed descriptions from your current Git diff.
+- Uses Google Gemini (via the official API) for high-quality, context-aware summaries.
+- Ignores changes related only to environment variable values for cleaner PRs.
+- Output is shown in a dedicated VS Code Output panel for easy copy-paste.
 
-For example if there is an image subfolder under your extension project workspace:
+## 🚀 Usage
 
-\!\[feature X\]\(images/feature-x.png\)
+1. Open a Git repository in VS Code.
+2. Make your code changes and commit as usual.
+3. Run the command: `PatchMind: Generate Pull Request Summary` (search in Command Palette).
+4. View your AI-generated PR title and description in the "PatchMind PR Summary" output panel.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## 🛠 Requirements
 
-## Requirements
+- Node.js v18 or later
+- A Google Gemini API key ([get one for free](https://aistudio.google.com/app/apikey))
+- Add your API key to a `.env` file at the root of your project:
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+  ```env
+  GEMINI_API_KEY=your-key-here
+  ```
 
-## Extension Settings
+## ⚙️ Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+No custom settings. All configuration is via your `.env` file.
 
-For example:
+## 🐞 Known Issues
 
-This extension contributes the following settings:
+- Only works in Git repositories.
+- Requires a remote branch named `dev` (or edit the code to change the base branch).
+- Large diffs may hit Gemini API limits.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## 📦 Release Notes
 
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+### 0.0.1
+- Initial release: Generate PR summaries with Gemini.
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy using PatchMind!**

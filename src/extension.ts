@@ -1,95 +1,109 @@
 import * as vscode from 'vscode';
-import * as dotenv from 'dotenv';
 import * as path from 'path';
-
+import * as dotenv from 'dotenv';
+// Load .env from root directory
 const envPath = path.join(__dirname, '..', '.env');
 dotenv.config({ path: envPath });
-console.log('🔐 Loaded GEMINI_API_KEY from:', envPath);
-console.log('🔐 GEMINI_API_KEY:', process.env.GEMINI_API_KEY?.slice?.(0, 5), '...');
 
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+// Import GoogleGenAI SDK
+
 
 export function activate(context: vscode.ExtensionContext) {
-  vscode.window.showInformationMessage('✅ PatchMind extension activated!');
   console.log('✅ PatchMind activated!');
+  vscode.window.showInformationMessage('✅ PatchMind extension is active!');
 
-  const disposable = vscode.workspace.onDidSaveTextDocument(
-    async (document) => {
-      const filePath = document.uri.fsPath;
+  // Register PR Summary Command
+  const prCommand = vscode.commands.registerCommand(
+    'patchmind.generatePrSummary',
+    async () => {
+      vscode.window.showInformationMessage('🧠 Generating PR summary...');
 
-      // Only trigger on Python files
-      if (!filePath.endsWith('.py')) return;
+      // Get workspace root
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage('❌ No workspace folder is open.');
+        return;
+      }
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
 
-      const fileContent = document.getText();
-      const filename = document.uri.path.split('/').pop();
+      try {
+        const { execSync } = require('child_process');
+        const LAST_USED_BRANCH_KEY = 'patchmind.lastBaseBranch';
 
-      vscode.window.showInformationMessage(
-        `🧠 PatchMind triggered on save: ${filename}`
-      );
+		// Get last used or default
+		const lastBranch = context.globalState.get<string>(LAST_USED_BRANCH_KEY) || 'dev';
 
-      const prompt = `You're an AI code assistant. Given the following Python function(s), generate a detailed Google-style docstring for each one:\n\n${fileContent}`;
+		// Prompt the user
+		const baseBranch = await vscode.window.showInputBox({
+		prompt: 'Enter base branch (e.g., dev, main, release/x)',
+		placeHolder: 'dev',
+		value: lastBranch,
+		});
 
-      const result = await callGemini(prompt);
+		if (!baseBranch) {
+		vscode.window.showWarningMessage('⚠️ No base branch provided.');
+		return;
+		}
 
-      if (result) {
-        vscode.window.showInformationMessage(
-          `📄 Gemini result ready (first 200 chars logged)`
-        );
-        console.log('🔧 Gemini output:\n', result.slice(0, 200));
-        // Future: insert result into document or show as virtual text
-      } else {
-        vscode.window.showWarningMessage('⚠️ Gemini returned no result.');
+		// Save it for next time
+		await context.globalState.update(LAST_USED_BRANCH_KEY, baseBranch);
+
+		if (!baseBranch) {
+		vscode.window.showWarningMessage('⚠️ No base branch provided.');
+		return;
+		}
+
+		const diff = execSync(`git diff origin/${baseBranch}..HEAD`, {
+		cwd: workspaceRoot
+		}).toString();
+
+        if (!diff || diff.trim() === '') {
+          vscode.window.showWarningMessage(
+            '🟡 No diff found between current branch and origin/dev.'
+          );
+          return;
+        }
+
+        const prompt = `You are an expert software engineer. Given the following Git diff, generate:\n\n1. A concise but meaningful pull request title\n2. A detailed, human-readable description of the changes\n\nIgnore any changes that are only related to environment variable values.\n\nGit diff:\n\n${diff}`;
+
+        const result = await callGemini(prompt);
+
+        if (result) {
+          const panel = vscode.window.createOutputChannel('PatchMind PR Summary');
+          panel.appendLine(result);
+          panel.show(true);
+		  vscode.window.showInformationMessage('✅ PR summary generated successfully! View in Output panel (PatchMind PR Summary).');
+        } else {
+          vscode.window.showErrorMessage('❌ Failed to generate summary.');
+        }
+      } catch (err: any) {
+        vscode.window.showErrorMessage('❌ Error running git diff: ' + err.message);
       }
     }
   );
 
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(prCommand);
 }
 
 export function deactivate() {
   console.log('🛑 PatchMind deactivated.');
 }
 
+
+
 async function callGemini(prompt: string): Promise<string | undefined> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
-      vscode.window.showErrorMessage('❌ GEMINI_API_KEY not found in .env');
-      return;
-    }
-
-    // Dynamically import node-fetch for CommonJS compatibility
-    const fetch = (await import('node-fetch')).default;
-
-    const response = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ]
-      })
+    // Dynamically import the ESM module
+    const { GoogleGenAI } = await import('@google/genai');
+    // The client gets the API key from the environment variable `GEMINI_API_KEY`.
+    const ai = new GoogleGenAI({});
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
     });
-
-    type GeminiResponse = {
-      candidates?: {
-        content?: {
-          parts?: { text?: string }[];
-        };
-      }[];
-    };
-
-    const data = (await response.json()) as GeminiResponse;
-
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return reply;
-  } catch (err) {
+    // response.text contains the generated text
+    return response.text;
+  } catch (err: any) {
     console.error('Gemini API error:', err);
     vscode.window.showErrorMessage('❌ Gemini API call failed.');
     return undefined;
