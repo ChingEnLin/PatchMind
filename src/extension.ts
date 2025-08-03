@@ -30,32 +30,32 @@ export function activate(context: vscode.ExtensionContext) {
         const { execSync } = require('child_process');
         const LAST_USED_BRANCH_KEY = 'patchmind.lastBaseBranch';
 
-		// Get last used or default
-		const lastBranch = context.globalState.get<string>(LAST_USED_BRANCH_KEY) || 'dev';
+    // Get last used or default
+    const lastBranch = context.globalState.get<string>(LAST_USED_BRANCH_KEY) || 'dev';
 
-		// Prompt the user
-		const baseBranch = await vscode.window.showInputBox({
-		prompt: 'Enter base branch (e.g., dev, main, release/x)',
-		placeHolder: 'dev',
-		value: lastBranch,
-		});
+    // Prompt the user
+    const baseBranch = await vscode.window.showInputBox({
+    prompt: 'Enter base branch (e.g., dev, main, release/x)',
+    placeHolder: 'dev',
+    value: lastBranch,
+    });
 
-		if (!baseBranch) {
-		vscode.window.showWarningMessage('⚠️ No base branch provided.');
-		return;
-		}
+    if (!baseBranch) {
+    vscode.window.showWarningMessage('⚠️ No base branch provided.');
+    return;
+    }
 
-		// Save it for next time
-		await context.globalState.update(LAST_USED_BRANCH_KEY, baseBranch);
+    // Save it for next time
+    await context.globalState.update(LAST_USED_BRANCH_KEY, baseBranch);
 
-		if (!baseBranch) {
-		vscode.window.showWarningMessage('⚠️ No base branch provided.');
-		return;
-		}
+    if (!baseBranch) {
+    vscode.window.showWarningMessage('⚠️ No base branch provided.');
+    return;
+    }
 
-		const diff = execSync(`git diff origin/${baseBranch}..HEAD`, {
-		cwd: workspaceRoot
-		}).toString();
+    const diff = execSync(`git diff origin/${baseBranch}..HEAD`, {
+    cwd: workspaceRoot
+    }).toString();
 
         if (!diff || diff.trim() === '') {
           vscode.window.showWarningMessage(
@@ -66,13 +66,31 @@ export function activate(context: vscode.ExtensionContext) {
 
         const prompt = `You are an expert software engineer. Given the following Git diff, generate:\n\n1. A concise but meaningful pull request title\n2. A detailed, human-readable description of the changes\n\nIgnore any changes that are only related to environment variable values.\n\nGit diff:\n\n${diff}`;
 
-        const result = await callGemini(prompt);
+        // Get Gemini API key from env or globalState
+        let apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+          apiKey = await context.globalState.get<string>('patchmind.geminiApiKey');
+        }
+        if (!apiKey) {
+          apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Gemini API key (will be saved for future use)',
+            ignoreFocusOut: true,
+            password: true,
+          });
+          if (!apiKey) {
+            vscode.window.showErrorMessage('❌ Gemini API key is required.');
+            return;
+          }
+          await context.globalState.update('patchmind.geminiApiKey', apiKey);
+        }
+
+        const result = await callGemini(prompt, apiKey);
 
         if (result) {
           const panel = vscode.window.createOutputChannel('PatchMind PR Summary');
           panel.appendLine(result);
           panel.show(true);
-		  vscode.window.showInformationMessage('✅ PR summary generated successfully! View in Output panel (PatchMind PR Summary).');
+      vscode.window.showInformationMessage('✅ PR summary generated successfully! View in Output panel (PatchMind PR Summary).');
         } else {
           vscode.window.showErrorMessage('❌ Failed to generate summary.');
         }
@@ -91,12 +109,12 @@ export function deactivate() {
 
 
 
-async function callGemini(prompt: string): Promise<string | undefined> {
+async function callGemini(prompt: string, apiKey: string): Promise<string | undefined> {
   try {
     // Dynamically import the ESM module
     const { GoogleGenAI } = await import('@google/genai');
-    // The client gets the API key from the environment variable `GEMINI_API_KEY`.
-    const ai = new GoogleGenAI({});
+    // Pass the API key explicitly
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
